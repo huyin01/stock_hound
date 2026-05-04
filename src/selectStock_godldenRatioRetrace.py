@@ -23,14 +23,29 @@ data_dir = os.path.join(src_dir, '..', 'data')
 # 切换工作目录到脚本所在目录
 os.chdir(src_dir)
 
+# 获取所有A股股票列表
+def get_all_stocks():
+    Codes_file_path = os.path.join(data_dir, 'ASharesCodes.csv')
+    try:
+        stock_codes = pd.read_csv(Codes_file_path)
+    except FileNotFoundError:
+        try:
+            stock_codes = pro.stock_basic(list_status='L')  # 获取上市股票列表
+            time.sleep(0.125)  # 数据库每分钟只能调用500次，为了防止被限制
+            stock_codes.to_csv(Codes_file_path)
+        except Exception as e:
+            print(f"Error fetching stock list: {e}")
+            return []
+    return stock_codes['ts_code'].tolist()
+
 # 获取股票数据函数：获取某只股票的历史数据（最近40天）
 def get_stock_data(stock_symbol, days=40):
     end_date = datetime.datetime.today().strftime('%Y%m%d')
     start_date = (datetime.datetime.today() - datetime.timedelta(days=days)).strftime('%Y%m%d')
-    time.sleep(0.12)  # 数据库每分钟只能调用500次，为了防止被限制
     # 获取股票数据
     try:
         stock_data = pro.daily(ts_code=stock_symbol, start_date=start_date, end_date=end_date)
+        time.sleep(0.125)  # 数据库每分钟只能调用500次，为了防止被限制
         stock_data = stock_data[['trade_date', 'close']].sort_values(by='trade_date')
         stock_data['trade_date'] = pd.to_datetime(stock_data['trade_date'], format='%Y%m%d')
     except Exception as e:
@@ -116,19 +131,7 @@ def check_fibonacci_retracement(stock_data, starting_price, highest_price, max_i
     return None  # 没有回调到黄金分割点
 
 
-# 获取所有A股股票列表
-def get_all_stocks():
-    Codes_file_path = os.path.join(data_dir, 'ASharesCodes.csv')
-    try:
-        stock_codes = pd.read_csv(Codes_file_path)
-    except FileNotFoundError:
-        try:
-            stock_codes = pro.stock_basic(list_status='L')  # 获取上市股票列表
-            stock_codes.to_csv(Codes_file_path)
-        except Exception as e:
-            print(f"Error fetching stock list: {e}")
-            return []
-    return stock_codes['ts_code'].tolist()
+
 
 
 # 筛选符合条件的股票
@@ -196,6 +199,7 @@ def main():
     # 输出筛选结果到文件
     output_results(results)
 
+    print("程序运行结束！！！")
 
 if __name__ == "__main__":
     main()

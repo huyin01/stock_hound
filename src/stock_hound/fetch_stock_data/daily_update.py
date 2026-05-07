@@ -56,15 +56,18 @@ class DailyUpdater:
         """获取所有股票和ETF代码"""
         all_codes = []
         
-        # 获取股票
+        # # 获取股票
+        # stocks = self.fetcher.get_all_stocks()
+        # all_codes.extend([s['code'] for s in stocks])
+        
+        # # 获取ETF
+        # etfs = self.fetcher.get_etf_list()
+        # all_codes.extend([e['code'] for e in etfs])
+        
+        # return all_codes
+
         stocks = self.fetcher.get_all_stocks()
-        all_codes.extend([s['code'] for s in stocks])
-        
-        # 获取ETF
-        etfs = self.fetcher.get_etf_list()
-        all_codes.extend([e['code'] for e in etfs])
-        
-        return all_codes
+        return [s['code'] for s in stocks]
     
     def update_incremental(
         self, 

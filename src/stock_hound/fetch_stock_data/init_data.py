@@ -138,10 +138,14 @@ class InitDataRunner:
         
         all_records = []
         
-        # 获取股票列表（从Baostock）
+        # 获取股票和ETF列表（全部从Baostock）
         stocks = self.fetcher.get_all_stocks()
+        etf_count = 0
         if stocks:
             for s in stocks:
+                is_etf = s.get('is_etf', 0)
+                if is_etf:
+                    etf_count += 1
                 record = {
                     'ts_code': self._bs_code_to_ts_code(s['code']),
                     'symbol': s['symbol'],
@@ -150,27 +154,27 @@ class InitDataRunner:
                     'list_status': 'L',
                     'list_date': '',
                     'delist_date': '',
-                    'is_etf': 0
+                    'is_etf': is_etf
                 }
                 all_records.append(record)
-            logger.info(f"股票: {len(stocks)} 只")
+            logger.info(f"股票: {len(stocks) - etf_count} 只, ETF: {etf_count} 只")
         
-        # 获取ETF列表（从akshare）
-        etfs = self.fetcher.get_etf_list()
-        if etfs:
-            for e in etfs:
-                record = {
-                    'ts_code': self._bs_code_to_ts_code(e['code']),
-                    'symbol': e['symbol'],
-                    'name': e['name'],
-                    'market': e['market'],
-                    'list_status': 'L',
-                    'list_date': '',
-                    'delist_date': '',
-                    'is_etf': 1
-                }
-                all_records.append(record)
-            logger.info(f"ETF: {len(etfs)} 只")
+        # # 获取ETF列表（从akshare）
+        # etfs = self.fetcher.get_etf_list()
+        # if etfs:
+        #     for e in etfs:
+        #         record = {
+        #             'ts_code': self._bs_code_to_ts_code(e['code']),
+        #             'symbol': e['symbol'],
+        #             'name': e['name'],
+        #             'market': e['market'],
+        #             'list_status': 'L',
+        #             'list_date': '',
+        #             'delist_date': '',
+        #             'is_etf': 1
+        #         }
+        #         all_records.append(record)
+        #     logger.info(f"ETF: {len(etfs)} 只")
         
         if all_records:
             self.db.insert_stock_info(all_records)
@@ -222,16 +226,21 @@ class InitDataRunner:
         logger.info(f"写入策略: 每 {batch_size} 只股票写入一次数据库")
         logger.info("=" * 60)
         
+        # # 如果没有指定股票代码，获取全部（股票 + ETF）
+        # if stock_codes is None:
+        #     all_codes = []
+        #     # 获取股票
+        #     stocks = self.fetcher.get_all_stocks()
+        #     all_codes.extend([s['code'] for s in stocks])
+        #     # 获取ETF
+        #     etfs = self.fetcher.get_etf_list()
+        #     all_codes.extend([e['code'] for e in etfs])
+        #     stock_codes = all_codes
+
         # 如果没有指定股票代码，获取全部（股票 + ETF）
         if stock_codes is None:
-            all_codes = []
-            # 获取股票
             stocks = self.fetcher.get_all_stocks()
-            all_codes.extend([s['code'] for s in stocks])
-            # 获取ETF
-            etfs = self.fetcher.get_etf_list()
-            all_codes.extend([e['code'] for e in etfs])
-            stock_codes = all_codes
+            stock_codes = [s['code'] for s in stocks]
         
         total_stocks = len(stock_codes)
         logger.info(f"共 {total_stocks} 只（股票+ETF）")

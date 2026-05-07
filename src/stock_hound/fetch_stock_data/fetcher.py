@@ -63,9 +63,8 @@ class DataFetcher:
             return []
         
         if date is None:
-            # 使用一个确定是交易日的日期（避免周末/假期无数据）
-            # 股票列表不需要每天更新，用一个历史交易日即可
-            date = "2024-12-31"
+            # 使用一个确定有数据的交易日（ETF数据从2026-01-05开始提供）
+            date = "2026-04-30"
         
         all_stocks = []
         
@@ -97,7 +96,7 @@ class DataFetcher:
                 # 上交所ETF: sh.51开头
                 # 深交所ETF: sz.15开头
                 is_stock = code.startswith('sh.60') or code.startswith('sz.00') or code.startswith('sz.30')
-                is_etf = code.startswith('sh.51') or code.startswith('sz.15')
+                is_etf = code.startswith('sh.51') or code.startswith('sh.56') or code.startswith('sh.58') or code.startswith('sz.15') or code.startswith('sz.16')
                 
                 # 只保留股票和ETF
                 if not (is_stock or is_etf):
@@ -113,7 +112,7 @@ class DataFetcher:
                 }
                 all_stocks.append(stock)
             
-            logger.info(f"获取到 {len(all_stocks)} 只股票")
+            logger.info(f"获取到 {len(all_stocks)} 只股票/ETF")
             
             return all_stocks
             
@@ -174,9 +173,10 @@ class DataFetcher:
         # 方案2: 从本地文件获取
         try:
             import csv
-            from pathlib import Path
-            
-            etf_file = Path(__file__).parent / 'etf_list.csv'
+            # from pathlib import Path
+            from config import ETF_LIST_PATH  # 从config导入
+            etf_file = ETF_LIST_PATH  # 使用配置的路径
+            # etf_file = Path(__file__).parent / 'etf_list.csv'
             
             if not etf_file.exists():
                 logger.warning(f"ETF列表文件不存在: {etf_file}")

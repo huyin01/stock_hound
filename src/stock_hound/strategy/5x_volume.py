@@ -1,21 +1,39 @@
-# import os
-import sys
 import time
 
-# from datetime import datetime
 import pandas as pd
 
 from pathlib import Path
-sys.path.append(str(Path(__file__).resolve().parent.parent))
-from utils import get_stock as gs
 
+from database.stock_repository import StockRepository
+
+# =========================
+# 参数设置
+# =========================
 
 #————查询某一天是否为N倍放量
 # 定义查询日期，转换成日期格式
-query_date = '20250827'
+query_date = '20250827' #！！！！！查询时手工调整，后期可以设置为当天日期！！！！！！！
 query_date_obj =pd.to_datetime(query_date)
 AMPLY_VALUE = 6   # 只选取放量value倍以上的，前次用值2.5
 CHANGE_VALUE = 6    # 只选取上涨幅度为value%以上的,前次用值4
+
+# =========================
+# 路径
+# =========================
+BASE_DIR = Path(__file__).resolve().parent.parent.parent
+
+DB_PATH = BASE_DIR / 'stock_data.db'
+
+STOCK_LIST_PATH = (
+    BASE_DIR / 'data' / 'ASharesCodes.csv'
+)
+
+# =========================
+# 初始化 Repository
+# =========================
+repo = StockRepository(DB_PATH)
+
+
 # 定义N倍放量判断函数
 def amount_Ntimes(stock,output_list):
     # 获得300天数据

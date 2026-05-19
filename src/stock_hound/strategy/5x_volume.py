@@ -34,20 +34,45 @@ STOCK_LIST_PATH = (
 repo = StockRepository(DB_PATH)
 
 
-# 定义N倍放量判断函数
-def amount_Ntimes(stock,output_list):
-    # 获得300天数据
-    df = gs.getstock(stock,50)
+# =========================
+# 判断是否为N倍放量
+# =========================
+def amount_Ntimes(
+    stock:str,
+    output_list:list
+    ):
+    try:
+        # 获得50天数据
+        df = repo.get_recent_daily_data(
+            symbol=stock,
+            limit=50,
+        )
+    except Exception as e:
+        print(f"{stock}读取失败：{e}")
+        return
+    #==========
+    #数据为空
+    #==========
     if df is None or df.empty:
-        print(f"{stock} 没有返回有效数据，跳过")
+        print(f"{stock} 数据为空")
         return
-
+    #=================
     # 检查是否有必要字段
-    required_columns = {'trade_date', 'amount'}
+    #=================
+    required_columns = {
+        'trade_date',
+        'volume',
+        'pct_chg',
+        }
     if not required_columns.issubset(df.columns):
-        print(f"{stock} 数据缺失必要字段（{required_columns}），实际字段：{df.columns}")
+        print(
+            f"{stock} 缺少必要字段"
+            f"{required_columns}"
+            )
         return
-
+    #=================
+    # 查找目标日期
+    #=================
     # 将df数据的日期由字符串转为date
     df['trade_date'] = pd.to_datetime(df['trade_date'])
 
@@ -57,38 +82,54 @@ def amount_Ntimes(stock,output_list):
     except IndexError:
         print(f"{stock} 在 {query_date} 没有数据")
         return
-    # 只留下上涨≥5%的
+    #=========================
+    # 涨幅过滤，只留下上涨≥5%的
+    #=========================
     if df.loc[target_index, "pct_chg"] < CHANGE_VALUE:
         # print(f"{stock} 在 {query_date} 上涨幅度不足{CHANGE_VALUE}%")
         return
-
+    #===========================
     # 获取目标日期以及前10天的索引
+    # 数据已经按日期倒序排列
+    #===========================
     if len(df.index[df.index >= target_index]) < 11:
         print(f"{stock} 数据不足，跳过")
         return
     prev_11_indices = df.index[df.index >= target_index][0:11]
 
     # 获取这些索引对应的 'trade_date'、'amount' 列的数据
-    prev_11_data = df.loc[prev_11_indices, ['trade_date','amount']]
+    prev_11_data = df.loc[prev_11_indices, ['trade_date','volume']]
 
     # 查询日的成交量
-    query_amount = prev_11_data.iloc[0,1]
+    query_volume = prev_11_data.iloc[0,1]
     # print(f'查询日的成交量是：{query_amount}')
 
-    prev_10amount_mean = prev_11_data['amount'].iloc[1:11].mean()
+    prev_10volume_mean = (
+        prev_11_data['volume'].iloc[1:11]
+        .mean()
+    )
     # print(f'查询日前10天成交量的均值是：{prev_10amount_mean}')
 
-    if query_amount >= prev_10amount_mean*AMPLY_VALUE:
-        print(f'{stock}在{query_date}满足成交量{AMPLY_VALUE}倍放大')
+    # =========================
+    # N倍放量判断
+    # =========================
+    if query_volume >= prev_10volume_mean*AMPLY_VALUE:
+        print(
+            f"{stock}在{query_date}"
+            f"满足成交量"
+            f"{AMPLY_VALUE}倍放大"
+            )
         output_list.append(stock)
 
-
+#=========
+#主程序
+#=========
 def main():
-    print("NtimesAmout：程序开始运行。。。")
+    print("5x_volume：程序开始运行...")
     # 准备结果列表
     result_list = []
 
-    # 读取待循环股票dataframe
+    # 读取待循环股票列表
     file_path = (Path(__file__).parent.parent.parent / 'data' / 'ASharesCodes.csv').resolve()
     df_stock = pd.read_csv(file_path)
 

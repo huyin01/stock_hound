@@ -49,13 +49,13 @@ def amount_Ntimes(
         )
     except Exception as e:
         print(f"{stock}读取失败：{e}")
-        return
+        return None
     #==========
     #数据为空
     #==========
     if df is None or df.empty:
         print(f"{stock} 数据为空")
-        return
+        return None
     #=================
     # 检查是否有必要字段
     #=================
@@ -69,7 +69,7 @@ def amount_Ntimes(
             f"{stock} 缺少必要字段"
             f"{required_columns}"
             )
-        return
+        return None
     #=================
     # 查找目标日期
     #=================
@@ -81,20 +81,20 @@ def amount_Ntimes(
         target_index = df[df['trade_date'] == query_date_obj].index[0]
     except IndexError:
         print(f"{stock} 在 {query_date} 没有数据")
-        return
+        return None
     #=========================
-    # 涨幅过滤，只留下上涨≥5%的
+    # 涨幅过滤
     #=========================
     if df.loc[target_index, "pct_chg"] < CHANGE_VALUE:
         # print(f"{stock} 在 {query_date} 上涨幅度不足{CHANGE_VALUE}%")
-        return
+        return None
     #===========================
-    # 获取目标日期以及前10天的索引
+    # 获取目标日+前10日
     # 数据已经按日期倒序排列
     #===========================
     if len(df.index[df.index >= target_index]) < 11:
         print(f"{stock} 数据不足，跳过")
-        return
+        return None
     prev_11_indices = df.index[df.index >= target_index][0:11]
 
     # 获取这些索引对应的 'trade_date'、'amount' 列的数据
@@ -119,7 +119,13 @@ def amount_Ntimes(
             f"满足成交量"
             f"{AMPLY_VALUE}倍放大"
             )
-        output_list.append(stock)
+        return {
+            "code": stock,
+            "trade_date": query_date,
+            "pct_chg": df.loc[target_index, "pct_chg"],
+            "volume_ratio": query_volume / prev_10volume_mean
+        }
+    return None
 
 #=========
 #主程序
@@ -127,17 +133,23 @@ def amount_Ntimes(
 def main():
     print("5x_volume：程序开始运行...")
     # 准备结果列表
-    result_list = []
+    results = []
 
     # 读取待循环股票列表
-    file_path = (Path(__file__).parent.parent.parent / 'data' / 'ASharesCodes.csv').resolve()
-    df_stock = pd.read_csv(file_path)
+    # file_path = (Path(__file__).parent.parent.parent / 'data' / 'ASharesCodes.csv').resolve()
+    df_stock = pd.read_csv(STOCK_LIST_PATH)
 
     # 对df_stock中的stock_id循环，完成操作
     for stock_id in df_stock['ts_code']:
-        amount_Ntimes(stock_id,result_list)
-        time.sleep(0.12*10)
-    print(f'list{query_date} = {result_list}')
+        res = amount_Ntimes(stock_id)
+        if res is not None:
+            results.append(res)
+            print(f"发现目标: {stock_id}") 
+        # time.sleep(0.12*10)   #在线数据库限制频率时使用
+    df_result = pd.DataFrame(results)
+    print("\n最终筛选结果：")
+    print(df_result)
+    return df_result
 
 if __name__ == "__main__":
     main()

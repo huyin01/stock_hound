@@ -6,13 +6,16 @@ from pathlib import Path
 
 from database.stock_repository import StockRepository
 
+from datetime import datetime
 # =========================
 # 参数设置
 # =========================
 
 #————查询某一天是否为N倍放量
 # 定义查询日期，转换成日期格式
-query_date = '20250827' #！！！！！查询时手工调整，后期可以设置为当天日期！！！！！！！
+now = datetime.now()
+query_date = now.strftime("%Y%m%d") 
+# query_date = '20250827' #手工查询时使用
 query_date_obj =pd.to_datetime(query_date)
 AMPLY_VALUE = 6   # 只选取放量value倍以上的，前次用值2.5
 CHANGE_VALUE = 6    # 只选取上涨幅度为value%以上的,前次用值4
